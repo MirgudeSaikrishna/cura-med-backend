@@ -5,7 +5,7 @@ const User=require('./models/user')
 const Product=require('./models/product')
 const Seller=require('./models/seller')
 const jwt=require('jsonwebtoken')
-mongoose.connect('your_dbURL')
+mongoose.connect('mongodb://127.0.0.1:27017/myDatabaseName')
 const app=express()
 app.use(cors())
 app.use(express.json())
@@ -56,7 +56,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, secret_key);
+                }, 'secret_key');
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -72,7 +72,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, secret_key);
+                }, 'secret_key');
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -89,7 +89,7 @@ app.get('/api/U_view', async (req, res) => {
 })
 
 app.get('/api/products', async (req,res)=>{
-    const products=await Product.find()
+    const products=await Product.find({seller:req.headers['shop-name']})
     if(products){
         return res.json({status:'ok',products})
     }
@@ -101,7 +101,7 @@ app.get('/api/products', async (req,res)=>{
 const authMiddleware= async(req,res,next)=>{
     const token=req.headers['x-access-token']
     if(token){
-        const decoded=jwt.verify(token,secret_key);
+        const decoded=jwt.verify(token,'secret_key');
         const email=decoded.email;
         const user=await Seller.findOne({email:email})
         if(user){
@@ -116,13 +116,14 @@ app.use(authMiddleware)
 app.get('/api/S_view', async (req, res) => {
     const token = req.headers['x-access-token'];
     try {
-        const decoded = jwt.verify(token,secret_key);
+        const decoded = jwt.verify(token,'secret_key');
         const email = decoded.email;
         const seller = await Seller.findOne({ email });
+        const products = await Product.find({ seller: seller.shopName });
         if (!seller) {
             return res.json({ status: 'error', error: 'Seller not found' });
         }else{
-            return res.json({status:'ok',seller})
+            return res.json({status:'ok',seller,products});
         }
     } catch (error) {
         return res.json({ status: 'error', error: 'Invalid token' });
@@ -131,14 +132,27 @@ app.get('/api/S_view', async (req, res) => {
 
 app.post('/api/addproduct', async (req,res)=>{
     try{
-        const {name,price,description}=req.body
-        const product=await Product.create({name,price,description})
+        const {name,price,description,seller}=req.body
+        const product=await Product.create({seller,name,price,description})
         return res.json({status:'ok'})
     }catch(err){
         return res.json({status:'error',error:'Error adding product'})
     }
-})
+});
 
+app.post('/api/deleteProduct', async (req,res)=>{
+    try{
+        const {id}=req.body
+        const product=await Product.findByIdAndDelete(id)
+        if(product){
+            return res.json({status:'ok'})
+        }else{
+            return res.json({status:'error',error:'Product not found'})
+        }
+    }catch(err){
+        return res.json({status:'error',error:'Error deleting product'})
+    }
+});
 
 app.listen(1337,()=>{
     console.log('Server is running on 1337')
