@@ -5,7 +5,7 @@ const User=require('./models/user')
 const Product=require('./models/product')
 const Seller=require('./models/seller')
 const jwt=require('jsonwebtoken')
-mongoose.connect('mongodb://127.0.0.1:27017/myDatabaseName')
+mongoose.connect(myDatabaseName)
 const app=express()
 app.use(cors())
 app.use(express.json())
@@ -56,7 +56,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, 'secret_key');
+                }, secret_key);
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -72,7 +72,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, 'secret_key');
+                }, secret_key);
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -101,7 +101,7 @@ app.get('/api/products', async (req,res)=>{
 const authMiddleware= async(req,res,next)=>{
     const token=req.headers['x-access-token']
     if(token){
-        const decoded=jwt.verify(token,'secret_key');
+        const decoded=jwt.verify(token,secret_key);
         const email=decoded.email;
         const user=await Seller.findOne({email:email})
         if(user){
@@ -116,7 +116,7 @@ app.use(authMiddleware)
 app.get('/api/S_view', async (req, res) => {
     const token = req.headers['x-access-token'];
     try {
-        const decoded = jwt.verify(token,'secret_key');
+        const decoded = jwt.verify(token,secret_key);
         const email = decoded.email;
         const seller = await Seller.findOne({ email });
         const products = await Product.find({ seller: seller.shopName });
