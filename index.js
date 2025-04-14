@@ -5,11 +5,27 @@ const User=require('./models/user')
 const Product=require('./models/product')
 const Seller=require('./models/seller')
 const jwt=require('jsonwebtoken')
-mongoose.connect(myDatabaseName)
+const multer=require('multer')
+const path=require('path')
+const fs = require('fs');
+
+mongoose.connect("mongodb://localhost:27017/user-data")
 const app=express()
 app.use(cors())
 app.use(express.json())
-const bcrypt=require('bcrypt')
+const bcrypt=require('bcryptjs')
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, 'uploads/'); // Make sure this folder exists
+    },
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + path.extname(file.originalname));
+    },
+  });
+const upload = multer({ storage: storage });
+
+app.use('/uploads', express.static('uploads'));
 
 app.post('/api/register', async (req, res) => {
     const {name, email,password}=req.body.formdata;
@@ -56,7 +72,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, secret_key);
+                }, "SECRET1162");
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -72,7 +88,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, secret_key);
+                }, "SECRET1162");
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -101,7 +117,7 @@ app.get('/api/products', async (req,res)=>{
 const authMiddleware= async(req,res,next)=>{
     const token=req.headers['x-access-token']
     if(token){
-        const decoded=jwt.verify(token,secret_key);
+        const decoded=jwt.verify(token,"SECRET1162");
         const email=decoded.email;
         const user=await Seller.findOne({email:email})
         if(user){
@@ -116,7 +132,7 @@ app.use(authMiddleware)
 app.get('/api/S_view', async (req, res) => {
     const token = req.headers['x-access-token'];
     try {
-        const decoded = jwt.verify(token,secret_key);
+        const decoded = jwt.verify(token,"SECRET1162");
         const email = decoded.email;
         const seller = await Seller.findOne({ email });
         const products = await Product.find({ seller: seller.shopName });
@@ -130,29 +146,53 @@ app.get('/api/S_view', async (req, res) => {
     }
 })
 
-app.post('/api/addproduct', async (req,res)=>{
+app.post('/api/addproduct',upload.single('image'), async (req,res)=>{
     try{
         const {name,price,description,seller}=req.body
-        const product=await Product.create({seller,name,price,description})
+        const image = req.file ? `/uploads/${req.file.filename}` : '';
+        const product=await Product.create({seller,name,price,description,image})
         return res.json({status:'ok'})
     }catch(err){
         return res.json({status:'error',error:'Error adding product'})
     }
 });
 
-app.post('/api/deleteProduct', async (req,res)=>{
-    try{
-        const {id}=req.body
-        const product=await Product.findByIdAndDelete(id)
-        if(product){
-            return res.json({status:'ok'})
-        }else{
-            return res.json({status:'error',error:'Product not found'})
-        }
-    }catch(err){
-        return res.json({status:'error',error:'Error deleting product'})
+
+
+app.post('/api/deleteProduct', async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ status: 'error', error: 'Product ID is required' });
     }
+
+    const product = await Product.findByIdAndDelete(id);
+
+    if (!product) {
+      return res.status(404).json({ status: 'error', error: 'Product not found' });
+    }
+
+    // Delete image file if it exists
+    if (product.image) {
+      const imagePath = path.join(__dirname, 'uploads', path.basename(product.image));
+
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Failed to delete image:', err);
+        } else {
+          console.log('Deleted image:', imagePath);
+        }
+      });
+    }
+
+    return res.json({ status: 'ok', message: 'Product and image deleted' });
+  } catch (err) {
+    console.error('Error deleting product:', err);
+    return res.status(500).json({ status: 'error', error: 'Error deleting product' });
+  }
 });
+
 
 app.listen(1337,()=>{
     console.log('Server is running on 1337')
