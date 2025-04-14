@@ -8,8 +8,9 @@ const jwt=require('jsonwebtoken')
 const multer=require('multer')
 const path=require('path')
 const fs = require('fs');
+require('dotenv').config()
 
-mongoose.connect("mongodb://localhost:27017/user-data")
+mongoose.connect(process.env.MONGO_URI)
 const app=express()
 app.use(cors())
 app.use(express.json())
@@ -60,19 +61,19 @@ app.post('/api/sregister', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     const  {usertype,email,password}=req.body;
-    if(usertype==='User'){
+    if(usertype==='user'){
         const user=await User.findOne({email:email})
         if (!user) {
-            return res.json({ status: 'error', error: 'Invalid username/password' });
+            return res.json({ status: 'error', error: 'Invalid mail' });
         }
         else{
             const isMatch=await bcrypt.compare(password,user.password)
             if(!isMatch){
-                return res.json({status:'error',error:'Invalid username/password'})
+                return res.json({status:'error',error:'Invalid password'})
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, "SECRET1162");
+                }, process.env.JWT_SECRET);
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -88,7 +89,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, "SECRET1162");
+                }, process.env.JWT_SECRET);
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -117,7 +118,7 @@ app.get('/api/products', async (req,res)=>{
 const authMiddleware= async(req,res,next)=>{
     const token=req.headers['x-access-token']
     if(token){
-        const decoded=jwt.verify(token,"SECRET1162");
+        const decoded=jwt.verify(token,process.env.JWT_SECRET);
         const email=decoded.email;
         const user=await Seller.findOne({email:email})
         if(user){
