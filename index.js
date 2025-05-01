@@ -44,14 +44,14 @@ app.post('/api/register', async (req, res) => {
 })
 
 app.post('/api/sregister', async (req, res) => {
-    const {shopName, email,password,phone,address}=req.body.formdata;
+    const {shopName, email,password,phone,address,latitude,longitude}=req.body.formdata;
     const hashPassword= await bcrypt.hash(password,10)
     const seller= await Seller.findOne({email: email})
     if(seller){
         res.json({status:'error',error:'Email already in use'})
     }else{
         try{
-            const seller = await Seller.create({shopName, email, password:hashPassword,phone,address});
+            const seller = await Seller.create({shopName, email, password:hashPassword,phone,address,location: {type: 'Point',coordinates: [longitude, latitude]}});
             return res.json({ status: 'ok' });
         } catch (err) {
             return res.json({ status: 'error'});
@@ -107,8 +107,9 @@ app.get('/api/U_view', async (req, res) => {
 
 app.get('/api/products', async (req,res)=>{
     const products=await Product.find({seller:req.headers['shop-name']})
+    const location=await Seller.findOne({shopName:req.headers['shop-name']}).select('location');
     if(products){
-        return res.json({status:'ok',products})
+        return res.json({status:'ok',products,location})
     }
     else{
         return res.json({status:'error',error:'no products found'})
