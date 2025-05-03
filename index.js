@@ -105,9 +105,12 @@ app.get('/api/U_view', async (req, res) => {
     return res.json({status:'ok',sellers});
 })
 
-app.get('/api/products', async (req,res)=>{
-    const products=await Product.find({seller:req.headers['shop-name']})
-    const location=await Seller.findOne({shopName:req.headers['shop-name']}).select('location');
+app.get('/api/products/:shopName', async (req,res)=>{
+    const shopName=req.params.shopName;
+    console.log(shopName);
+    const products=await Product.find({seller:shopName});
+
+    const location=await Seller.findOne({shopName:shopName}).select('location');
     if(products){
         return res.json({status:'ok',products,location})
     }
