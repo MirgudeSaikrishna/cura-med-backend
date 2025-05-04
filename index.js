@@ -105,9 +105,39 @@ app.get('/api/U_view', async (req, res) => {
     return res.json({status:'ok',sellers});
 })
 
+app.get('/api/nearest', async (req, res) => {
+    const { latitude, longitude, distance} = req.query; // Get latitude and longitude from query parameters
+
+    if (!latitude || !longitude) {
+        return res.status(400).json({ status: 'error', error: 'Latitude and longitude are required' });
+    }
+
+    try {
+        const sellers = await Seller.find({
+            location: {
+                $near: {
+                    $geometry: {
+                        type: 'Point',
+                        coordinates: [parseFloat(longitude), parseFloat(latitude)], // [longitude, latitude]
+                    },
+                    $maxDistance: distance*1000, // Maximum distance in meters (e.g., 5000 meters = 5 km)
+                },
+            },
+        });
+
+        if (sellers.length === 0) {
+            return res.json({ status: 'ok', message: 'No sellers found nearby' });
+        }
+
+        return res.json({ status: 'ok', sellers });
+    } catch (error) {
+        console.error('Error finding nearest sellers:', error);
+        return res.status(500).json({ status: 'error', error: 'Internal server error' });
+    }
+});
+
 app.get('/api/products/:shopName', async (req,res)=>{
     const shopName=req.params.shopName;
-    console.log(shopName);
     const products=await Product.find({seller:shopName});
 
     const location=await Seller.findOne({shopName:shopName}).select('location');
