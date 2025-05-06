@@ -98,11 +98,23 @@ app.post('/api/login', async (req, res) => {
 })
 
 app.get('/api/U_view', async (req, res) => {
-    const sellers = await Seller.find();
-    if (!sellers) {
-        return res.json({ status: 'error', error: 'No sellers found' });
+    try{
+        const token = req.headers['x-access-token'];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const email = decoded.email;
+        const user = await User.findOne({ email });
+        const sellers = await Seller.find();
+        if (!sellers) {
+            return res.json({ status: 'error', error: 'No sellers found' });
+        }
+        if(user) {
+            res.json({ status: 'ok', sellers, type:'user' });
+        }else{
+            res.json({ status: 'ok', sellers, type:'seller' });
+        }
+    }catch(err){
+        return res.json({ status: 'error', error: 'error fetching data' });
     }
-    return res.json({status:'ok',sellers});
 })
 
 app.get('/api/nearest', async (req, res) => {
@@ -139,7 +151,6 @@ app.get('/api/nearest', async (req, res) => {
 app.get('/api/products/:shopName', async (req,res)=>{
     const shopName=req.params.shopName;
     const products=await Product.find({seller:shopName});
-
     const location=await Seller.findOne({shopName:shopName}).select('location');
     if(products){
         return res.json({status:'ok',products,location})
