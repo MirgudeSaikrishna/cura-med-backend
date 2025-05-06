@@ -224,7 +224,6 @@ app.get('/api/nearest', async (req, res) => {
 app.get('/api/products/:shopName', async (req,res)=>{
     const shopName=req.params.shopName;
     const products=await Product.find({seller:shopName});
-
     const location=await Seller.findOne({shopName:shopName}).select('location');
     if(products){
         return res.json({status:'ok',products,location})
