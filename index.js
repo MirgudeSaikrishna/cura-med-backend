@@ -8,6 +8,8 @@ const jwt=require('jsonwebtoken')
 const multer=require('multer')
 const path=require('path')
 const fs = require('fs');
+// const nodemailer = require('nodemailer');
+// const crypto = require('crypto');
 require('dotenv').config()
 
 mongoose.connect(process.env.MONGO_URI)
@@ -59,6 +61,76 @@ app.post('/api/sregister', async (req, res) => {
     }
 })
 
+// let otpStore = {}; // Temporary store for OTPs (use a database in production)
+
+// // Endpoint to generate and send OTP
+// app.post('/api/send-otp', async (req, res) => {
+//     const { email } = req.body;
+
+//     if (!email) {
+//         return res.status(400).json({ status: 'error', error: 'Email is required' });
+//     }
+
+//     const otp = crypto.randomInt(100000, 999999);
+
+//     otpStore[email] = {
+//         otp,
+//         expiresAt: Date.now() + 5 * 60 * 1000, 
+//     };
+
+//     // Send OTP via email
+//     const transporter = nodemailer.createTransport({
+//         service: 'gmail',
+//         auth: {
+//             user: '22311A0580@cse.sreenidhi.edu.in', 
+//             pass: 'saikrishna580', 
+//         },
+//     });
+
+//     const mailOptions = {
+//         from: '22311A0580@cse.sreenidhi.edu.in',
+//         to: email,
+//         subject: 'Your OTP for Email Verification',
+//         text: `Your OTP is ${otp}. It is valid for 5 minutes.`,
+//     };
+
+//     try {
+//         await transporter.sendMail(mailOptions);
+//         res.json({ status: 'ok', message: 'OTP sent to your email' });
+//     } catch (error) {
+//         console.error('Error sending email:', error);
+//         res.status(500).json({ status: 'error', error: 'Failed to send OTP' });
+//     }
+// });
+
+// // Endpoint to verify OTP
+// app.post('/api/verify-otp', (req, res) => {
+//     const { email, otp } = req.body;
+
+//     if (!email || !otp) {
+//         return res.status(400).json({ status: 'error', error: 'Email and OTP are required' });
+//     }
+
+//     const storedOtp = otpStore[email];
+
+//     if (!storedOtp) {
+//         return res.status(400).json({ status: 'error', error: 'OTP not found or expired' });
+//     }
+
+//     if (storedOtp.otp !== parseInt(otp)) {
+//         return res.status(400).json({ status: 'error', error: 'Invalid OTP' });
+//     }
+
+//     if (Date.now() > storedOtp.expiresAt) {
+//         delete otpStore[email]; // Remove expired OTP
+//         return res.status(400).json({ status: 'error', error: 'OTP has expired' });
+//     }
+
+//     // OTP is valid
+//     delete otpStore[email]; // Remove OTP after successful verification
+//     res.json({ status: 'ok', message: 'Email verified successfully' });
+// });
+
 app.post('/api/login', async (req, res) => {
     const  {usertype,email,password}=req.body;
     if(usertype==='user'){
@@ -98,12 +170,25 @@ app.post('/api/login', async (req, res) => {
 })
 
 app.get('/api/U_view', async (req, res) => {
-    const sellers = await Seller.find();
-    if (!sellers) {
-        return res.json({ status: 'error', error: 'No sellers found' });
+    try{
+        const token = req.headers['x-access-token'];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const email = decoded.email;
+        const user = await User.findOne({ email });
+        const sellers = await Seller.find();
+        if (!sellers) {
+            return res.json({ status: 'error', error: 'No sellers found' });
+        }
+        if(user) {
+            res.json({ status: 'ok', sellers, type:'user' });
+        }else{
+            res.json({ status: 'ok', sellers, type:'seller' });
+        }
+    }catch(err){
+        return res.json({ status: 'error', error: 'error fetching data' });
     }
-    return res.json({status:'ok',sellers});
 })
+
 
 app.get('/api/nearest', async (req, res) => {
     const { latitude, longitude, distance} = req.query; // Get latitude and longitude from query parameters
