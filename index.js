@@ -82,13 +82,13 @@ app.post('/api/sregister', async (req, res) => {
 //     const transporter = nodemailer.createTransport({
 //         service: 'gmail',
 //         auth: {
-//             user: '22311A0580@cse.sreenidhi.edu.in', 
-//             pass: 'saikrishna580', 
+//             user: 'your mail', 
+//             pass: 'password', 
 //         },
 //     });
 
 //     const mailOptions = {
-//         from: '22311A0580@cse.sreenidhi.edu.in',
+//         from: 'your mail',
 //         to: email,
 //         subject: 'Your OTP for Email Verification',
 //         text: `Your OTP is ${otp}. It is valid for 5 minutes.`,
