@@ -191,7 +191,7 @@ app.get('/api/U_view', async (req, res) => {
 
 
 app.get('/api/nearest', async (req, res) => {
-    const { latitude, longitude, distance} = req.query; // Get latitude and longitude from query parameters
+    const { latitude, longitude, distance} = req.query; 
 
     if (!latitude || !longitude) {
         return res.status(400).json({ status: 'error', error: 'Latitude and longitude are required' });
@@ -203,16 +203,12 @@ app.get('/api/nearest', async (req, res) => {
                 $near: {
                     $geometry: {
                         type: 'Point',
-                        coordinates: [parseFloat(longitude), parseFloat(latitude)], // [longitude, latitude]
+                        coordinates: [parseFloat(longitude), parseFloat(latitude)], 
                     },
-                    $maxDistance: distance*1000, // Maximum distance in meters (e.g., 5000 meters = 5 km)
+                    $maxDistance: distance*1000, 
                 },
             },
         });
-
-        if (sellers.length === 0) {
-            return res.json({ status: 'ok', message: 'No sellers found nearby' });
-        }
 
         return res.json({ status: 'ok', sellers });
     } catch (error) {
