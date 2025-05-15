@@ -145,7 +145,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, process.env.JWT_SECRET);
+                }, process.env.JWT_SECRET,{expiresIn : '60m'});
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
@@ -161,7 +161,7 @@ app.post('/api/login', async (req, res) => {
             }else{
                 const token = jwt.sign({
                     email: user.email
-                }, process.env.JWT_SECRET);
+                }, process.env.JWT_SECRET,{expiresIn : '60m'});
                 return res.json({ status: 'ok', user: token ,type:usertype});
             }
         }
