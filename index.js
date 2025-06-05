@@ -217,15 +217,42 @@ app.get('/api/nearest', async (req, res) => {
     }
 });
 
-app.get('/api/products/:shopName', async (req,res)=>{
-    const shopName=req.params.shopName;
-    const products=await Product.find({seller:shopName});
-    const location=await Seller.findOne({shopName:shopName}).select('location');
-    if(products){
-        return res.json({status:'ok',products,location})
+app.get('/api/products/:shopName', async (req, res) => {
+    const shopName = req.params.shopName;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    const filter = { seller: shopName };
+    if (search) {
+        filter.name = { $regex: search, $options: 'i' }; 
     }
-    else{
-        return res.json({status:'error',error:'no products found'})
+
+    try {
+        const [products, total, location] = await Promise.all([
+            Product.find(filter).skip(skip).limit(limit),
+            Product.countDocuments(filter),
+            Seller.findOne({ shopName: shopName }).select('location')
+        ]);
+
+        if (products && products.length > 0) {
+            return res.json({
+                status: 'ok',
+                products,
+                location,
+                pagination: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit)
+                }
+            });
+        } else {
+            return res.json({ status: 'error', error: 'no products found' });
+        }
+    } catch (error) {
+        return res.status(500).json({ status: 'error', error: 'Internal server error' });
     }
 })
 
